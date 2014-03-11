@@ -30,6 +30,14 @@ html, body, #map {
   stroke-width: 1.5px;
 }
 
+path {
+  fill: none;
+  stroke: black;
+}
+.markers {
+  position: absolute;
+}
+
     </style>
   </head>
   <body>
@@ -43,40 +51,57 @@ var map = new google.maps.Map(d3.select("#map").node(), {
   mapTypeId: google.maps.MapTypeId.TERRAIN
 });
 
-// Now to same with seattle lines
-d3.json("route1b.json", function(data) {
+// Try with a line, not points
+d3.json("route2c.json", function(data) {
   var overlay = new google.maps.OverlayView();
+  var testdata = [{
+    name: "pt435850",
+    lng: -122.140182,
+    lat: 47.636005,
+   },  {
+    name: "pt435851",
+    lng: -122.139008,
+    lat: 47.636677,
+   },  {
+    name: "pt435852",
+    lng: -122.138123,
+    lat: 47.637188,
+   },  {
+    name: "pt435853",
+    lng: -122.137474,
+    lat: 47.637577,
+   },  {
+    name: "pt435854",
+    lng: -122.137024,
+    lat: 47.637913,
+   }];
 
-  // Add the container when the overlay is added to the map.
   overlay.onAdd = function() {
     var layer = d3.select(this.getPanes().overlayLayer).append("div")
         .attr("class", "stations");
 
     overlay.draw = function() {
-      console.log("data is");
-      console.log(d3.entries(data));
 
       var projection = this.getProjection(),
           padding = 10;
 
-      var line = d3.svg.line()
-          .x(function(d) { return transform(d)[0]; })
-          .y(function(d) { return transform(d)[1]; })
+      var lineFunction = d3.svg.line()
+          .x(function(d) { return transform(d.lat, d.lng)[0]; })
+          .y(function(d) { return transform(d.lat, d.lng)[1]; })
           .interpolate("linear");
 
-      var lineGraph = layer.append("path")
-          .attr("d", line(d3.entries(data)))
-          .attr("stroke", "blue")
-          .attr("stroke-width", 2)
-          .attr("fill", "none");
+      var line = layer.selectAll("path")
+          .data([testdata])
+          .enter()
+          .append("svg:path")
+          .attr("class", "path")
+          .attr("d", lineFunction);
 
-      function transform(d) {
-        console.log(d.value[0], d.value[1])
-        d = new google.maps.LatLng(d.value[0], d.value[1]);
+      function transform(lat, lng) {
+        d = new google.maps.LatLng(lat, lng);
         d = projection.fromLatLngToDivPixel(d);
-        return d3.select(this)
-            .style("left", (d.x - padding) + "px")
-            .style("top", (d.y - padding) + "px");
+        console.log(lat, lng, d.x, d.y)
+        return [d.x, d.y];
       }
     };
   };
@@ -85,7 +110,7 @@ d3.json("route1b.json", function(data) {
   overlay.setMap(map);
 });
 
-// Now to same with seattle data
+// Using points per stop for one route
 d3.json("route1a.json", function(data) {
   var overlay = new google.maps.OverlayView();
 
@@ -95,7 +120,6 @@ d3.json("route1a.json", function(data) {
         .attr("class", "stations");
 
     // Draw each marker as a separate SVG element.
-    // We could use a single SVG, but what size would it have?
     overlay.draw = function() {
       var projection = this.getProjection(),
           padding = 10;
