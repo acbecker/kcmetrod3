@@ -6,37 +6,37 @@
     <script type="text/javascript" src="http://maps.google.com/maps/api/js?sensor=true"></script>
     <style type="text/css">
 
-html, body, #map {
-  width: 100%;
-  height: 100%;
-  margin: 0;
-  padding: 0;
-}
+      html, body, #map {
+        width: 100%;
+        height: 100%;
+        margin: 0;
+        padding: 0;
+      }
 
-.stations, .stations svg {
-  position: absolute;
-}
+      .stations, .stations svg {
+        position: absolute;
+      }
 
-.stations svg {
-  width: 60px;
-  height: 20px;
-  padding-right: 100px;
-  font: 10px sans-serif;
-}
+      .stations svg {
+        width: 60px;
+        height: 20px;
+        padding-right: 100px;
+        font: 10px sans-serif;
+      }
 
-.stations circle {
-  fill: brown;
-  stroke: black;
-  stroke-width: 1.5px;
-}
+      .stations circle {
+        fill: brown;
+        stroke: black;
+        stroke-width: 1.5px;
+      }
 
-path {
-  fill: none;
-  stroke: black;
-}
-.markers {
-  position: absolute;
-}
+      path {
+        fill: none;
+        stroke: black;
+      }
+      .markers {
+        position: absolute;
+      }
 
     </style>
   </head>
@@ -44,113 +44,113 @@ path {
     <div id="map"></div>
     <script type="text/javascript">
 
-// Create the Google Map…
-var map = new google.maps.Map(d3.select("#map").node(), {
-  zoom: 10,
-  center: new google.maps.LatLng(47.61, -122.33),
-  mapTypeId: google.maps.MapTypeId.TERRAIN
-});
+    // Create the Google Map…
+    var map = new google.maps.Map(d3.select("#map").node(), {
+      zoom: 10,
+      center: new google.maps.LatLng(47.61, -122.33),
+      mapTypeId: google.maps.MapTypeId.TERRAIN
+    });
 
-// Try with a line, not points
-d3.json("route2c.json", function(data) {
-  var overlay = new google.maps.OverlayView();
-  var testdata = [{
-    name: "pt435850",
-    lng: -122.140182,
-    lat: 47.636005,
-   },  {
-    name: "pt435851",
-    lng: -122.139008,
-    lat: 47.636677,
-   },  {
-    name: "pt435852",
-    lng: -122.138123,
-    lat: 47.637188,
-   },  {
-    name: "pt435853",
-    lng: -122.137474,
-    lat: 47.637577,
-   },  {
-    name: "pt435854",
-    lng: -122.137024,
-    lat: 47.637913,
-   }];
+    // Try with a line, not points
+    var overlay = new google.maps.OverlayView();
+    var testdata = {}
+    testdata["route1"] = [[47.636005,-122.140182], [47.636677,-122.139008], [47.637188,-122.138123], [47.637577,-122.137474], [47.637913,-122.137024]]
+    testdata["route2"] = [[47.612888,-122.289314], [47.611626,-122.289337], [47.610409,-122.289383], [47.609257,-122.289391], [47.607945,-122.289421]]
 
-  overlay.onAdd = function() {
-    var layer = d3.select(this.getPanes().overlayLayer).append("div")
-        .attr("class", "stations");
 
-    overlay.draw = function() {
+    overlay.onAdd = function() {
+      var layer = d3.select(this.getPanes().overlayLayer).append("div")
+      .attr("class", "path");
 
-      var projection = this.getProjection(),
-          padding = 10;
+      overlay.draw = function() {
 
-      var lineFunction = d3.svg.line()
-          .x(function(d) { return transform(d.lat, d.lng)[0]; })
-          .y(function(d) { return transform(d.lat, d.lng)[1]; })
+        var projection = this.getProjection(),
+        padding = 10;
+
+        function transform(lat, lng) {
+          d = new google.maps.LatLng(lat, lng);
+          d = projection.fromLatLngToDivPixel(d);
+          console.log("xform", lat, lng, d.x, d.y)
+          return [d.x, d.y];
+        }
+        
+        var lineFunction = d3.svg.line()
+          .x(function(d) { console.log("X", d[0], d[1]); return transform(d[0], d[1])[0]; })
+          .y(function(d) { console.log("Y", d[0], d[1]); return transform(d[0], d[1])[1]; })
           .interpolate("linear");
 
-      var line = layer.selectAll("path")
-          .data([testdata])
-          .enter()
-          .append("svg:path")
-          .attr("class", "path")
-          .attr("d", lineFunction);
+        function drawLine(key) {
+          console.log("drawline", JSON.stringify(key))
+          d3.select(this).selectAll("path")
+            .data(testdata[key]).enter()
+            .append("svg:path") 
+            .attr("d", lineFunction(testdata[key]))
+            .attr("fill", "none")
+            .attr("stroke", "steelblue")
+            .attr("stroke-width", 3)
+          }
+          
+        var linegroup = layer.selectAll(".lineGroup")
+          .data(d3.keys(testdata))
+          .each(drawLine) // update existing
+          .enter().append("svg:g")
+          .each(drawLine)
+          .attr("class", "lineGroup")
 
-      function transform(lat, lng) {
-        d = new google.maps.LatLng(lat, lng);
-        d = projection.fromLatLngToDivPixel(d);
-        console.log(lat, lng, d.x, d.y)
-        return [d.x, d.y];
-      }
+        linegroup.append("svg:text")
+          .attr("x", padding+7)
+          .attr("y", padding)
+          .attr("dy", ".31em")
+          .text(function (d) {return d.key;})
+
+      };
     };
-  };
 
-  // Bind our overlay to the map…
-  overlay.setMap(map);
-});
+    // Bind our overlay to the map…
+    overlay.setMap(map);
 
-// Using points per stop for one route
-d3.json("route1a.json", function(data) {
-  var overlay = new google.maps.OverlayView();
 
-  // Add the container when the overlay is added to the map.
-  overlay.onAdd = function() {
-    var layer = d3.select(this.getPanes().overlayLayer).append("div")
-        .attr("class", "stations");
+//// Using points per stop for one route
+//d3.json("route1a.json", function(data) {
+//  var overlay = new google.maps.OverlayView();
+//
+//  // Add the container when the overlay is added to the map.
+//  overlay.onAdd = function() {
+//    var layer = d3.select(this.getPanes().overlayLayer).append("div")
+//        .attr("class", "stations");
+//
+//    // Draw each marker as a separate SVG element.
+//    overlay.draw = function() {
+//      var projection = this.getProjection(),
+//          padding = 10;
+//
+//      var marker = layer.selectAll("svg")
+//          .data(d3.entries(data))
+//          .each(transform) // update existing markers
+//          .enter().append("svg:svg")
+//          .each(transform)
+//          .attr("class", "marker");
+//
+//      // Add a circle.
+//      marker.append("svg:circle")
+//          .attr("r", 4.5)
+//          .attr("cx", padding)
+//          .attr("cy", padding);
+//
+//      function transform(d) {
+//        d = new google.maps.LatLng(d.value[0], d.value[1]);
+//        d = projection.fromLatLngToDivPixel(d);
+//        return d3.select(this)
+//            .style("left", (d.x - padding) + "px")
+//            .style("top", (d.y - padding) + "px");
+//      }
+//    };
+//  };
+//
+//  // Bind our overlay to the map…
+//  overlay.setMap(map);
+//});
 
-    // Draw each marker as a separate SVG element.
-    overlay.draw = function() {
-      var projection = this.getProjection(),
-          padding = 10;
-
-      var marker = layer.selectAll("svg")
-          .data(d3.entries(data))
-          .each(transform) // update existing markers
-          .enter().append("svg:svg")
-          .each(transform)
-          .attr("class", "marker");
-
-      // Add a circle.
-      marker.append("svg:circle")
-          .attr("r", 4.5)
-          .attr("cx", padding)
-          .attr("cy", padding);
-
-      function transform(d) {
-        d = new google.maps.LatLng(d.value[0], d.value[1]);
-        d = projection.fromLatLngToDivPixel(d);
-        return d3.select(this)
-            .style("left", (d.x - padding) + "px")
-            .style("top", (d.y - padding) + "px");
-      }
-    };
-  };
-
-  // Bind our overlay to the map…
-  overlay.setMap(map);
-});
-
-    </script>
+  </script>
   </body>
-</html>
+  </html>
