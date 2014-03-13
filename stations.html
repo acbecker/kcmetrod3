@@ -13,30 +13,6 @@
         padding: 0;
       }
 
-      .stations, .stations svg {
-        position: absolute;
-      }
-
-      .stations svg {
-        width: 60px;
-        height: 20px;
-        padding-right: 100px;
-        font: 10px sans-serif;
-      }
-
-      .stations circle {
-        fill: brown;
-        stroke: black;
-        stroke-width: 1.5px;
-      }
-
-      path {
-        fill: none;
-        stroke: black;
-      }
-      .markers {
-        position: absolute;
-      }
 
     </style>
   </head>
@@ -46,9 +22,11 @@
 
     // Create the Google Map…
     var map = new google.maps.Map(d3.select("#map").node(), {
-      zoom: 10,
+      zoom: 13,
       center: new google.maps.LatLng(47.61, -122.33),
-      mapTypeId: google.maps.MapTypeId.TERRAIN
+      mapTypeId: google.maps.MapTypeId.TERRAIN,
+      maxZoom: 15,
+      minZoom: 10
     });
 
     // Try with a line, not points
@@ -59,36 +37,36 @@
 
 
     overlay.onAdd = function() {
-      var layer = d3.select(this.getPanes().overlayLayer).append("div")
-      .attr("class", "path");
+      var layer = d3.select(this.getPanes().overlayLayer)
+        .append("svg")
+          .attr("class", "path");
 
       overlay.draw = function() {
 
         var projection = this.getProjection(),
         padding = 10;
 
-        function transform(lat, lng) {
-          d = new google.maps.LatLng(lat, lng);
+        function transform(p) {
+          d = new google.maps.LatLng(p[0], p[1]);
           d = projection.fromLatLngToDivPixel(d);
-          console.log("xform", lat, lng, d.x, d.y)
+          console.log("xform", p[0], p[1], d.x, d.y);
           return [d.x, d.y];
         }
         
         var lineFunction = d3.svg.line()
-          .x(function(d) { console.log("X", d[0], d[1]); return transform(d[0], d[1])[0]; })
-          .y(function(d) { console.log("Y", d[0], d[1]); return transform(d[0], d[1])[1]; })
+          .x(function(d) { console.log("X", d[0], d[1]); return transform(d)[0]; })
+          .y(function(d) { console.log("Y", d[0], d[1]); return transform(d)[1]; })
           .interpolate("linear");
 
         function drawLine(key) {
           console.log("drawline", JSON.stringify(key))
-          d3.select(this).selectAll("path")
-            .data(testdata[key]).enter()
+          d3.select(this)
             .append("svg:path") 
             .attr("d", lineFunction(testdata[key]))
             .attr("fill", "none")
             .attr("stroke", "steelblue")
             .attr("stroke-width", 3)
-          }
+        }
           
         var linegroup = layer.selectAll(".lineGroup")
           .data(d3.keys(testdata))
@@ -96,12 +74,6 @@
           .enter().append("svg:g")
           .each(drawLine)
           .attr("class", "lineGroup")
-
-        linegroup.append("svg:text")
-          .attr("x", padding+7)
-          .attr("y", padding)
-          .attr("dy", ".31em")
-          .text(function (d) {return d.key;})
 
       };
     };
